@@ -1,0 +1,22 @@
+[project]
+name = "xrch"
+version = "0.1.0"
+description = "Utility for social[off-chain/on-chain] analysis on solana memecoins"
+authors = [
+    {name = "Alexandr Beliakov",email = "genzksync0@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard] (>=0.116.0,<0.117.0)"
+]
+
+[tool.poetry]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
