@@ -1,3 +1,3 @@
-__all__ = "AxiomApi"
+__all__ = ("AxiomApi",)
 
 from axiom_api import AxiomApi
