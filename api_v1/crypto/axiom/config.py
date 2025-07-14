@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
 
+import env
+
 
 class BaseAxiomSettings(BaseSettings):
     refresh_access_token_url: str = "https://api7.axiom.trade/refresh-access-token"
@@ -12,6 +14,20 @@ class BaseAxiomSettings(BaseSettings):
     )
 
     pair_info_url: str = "https://api8.axiom.trade/pair-info?pairAddress="
+
+    defaults = {
+        "tokenTicker": "",
+        "tokenName": "",
+        "website": "",
+        "twitter": "",
+        "telegram": "",
+        "discord": "",
+        "lpBurned": "",
+        "twitterHandleHistory": [],
+    }
+
+    COOKIES = env.COOKIES
+    HEADERS = env.HEADERS
 
 
 settings = BaseAxiomSettings()
