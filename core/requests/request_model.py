@@ -1,7 +1,15 @@
 import asyncio
+import json
 import logging
 
 import aiohttp
+from aiohttp import ClientResponseError, ClientError, ContentTypeError
+
+from core.exceptions import (
+    NetworkError,
+    HttpStatusError,
+    JsonResponseError,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -9,23 +17,35 @@ logging.basicConfig(level=logging.INFO)
 
 class BaseRequest:
 
-    def __init__(self, session: aiohttp.ClientSession):
+    def __init__(self, session: aiohttp.ClientSession, headers: dict = None):
         self.session = session
+        self.headers = headers
 
-    async def _raw_get(self, url: str) -> dict | None:
+    async def _raw_get(self, url: str) -> dict:
+
         try:
-            async with self.session.get(url=url) as response:
+            async with self.session.get(url=url, headers=self.headers) as response:
 
-                if response.status != 200:
-                    logger.error(
-                        f"Error request to {self.__class__.__name__}. Status: %s",
-                        response.status,
-                    )
-
+                response.raise_for_status()
                 logger.info("GET %s -> %s", url, response.status)
-                data = await response.json()
-                logger.debug("Response data for %s: %s", url, data)
+                return await response.json()
 
-                return data
-        except Exception as e:
+        except asyncio.TimeoutError:
+            logger.error("Request to %s timed out", url)
+            raise NetworkError("Timeout")
+
+        except ContentTypeError as e:
+            logger.error("Invalid content type from %s: %s", url, e)
+            raise JsonResponseError(f"Invalid content type: {e}")
+
+        except json.JSONDecodeError as e:
+            logger.error("Invalid JSON from %s: %s…", url, await response.text()[:200])
+            raise JsonResponseError(f"JSON decode error: {e}")
+
+        except ClientResponseError as e:
+            logger.error("HTTP error %s for %s", e.status, url)
+            raise HttpStatusError(e.status, url)
+
+        except ClientError as e:
             logger.error("Network error for %s: %s", url, e)
+            raise NetworkError(f"{e}")
