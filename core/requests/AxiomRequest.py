@@ -1,8 +1,17 @@
+import asyncio
 import json
 import logging
+from typing import Type, Union
 
 import aiohttp
+from aiohttp import ClientError, ClientResponseError, ContentTypeError
 
+from core.exceptions import (
+    HttpStatusError,
+    NetworkError,
+    ApiError,
+    JsonResponseError,
+)
 from core.requests.request_model import BaseRequest
 
 
@@ -50,54 +59,87 @@ class AxiomRequest(BaseRequest):
                 self.session.cookie_jar.update_cookies(self.COOKIES)
                 logger.info("Tokens successfully update.")
                 return True
-        except Exception as e:
-            logger.exception("Error token update: %s", e)
+
+        except asyncio.TimeoutError:
+            logger.error("Request to %s timed out", refresh_url)
             return False
 
-    async def _raw_get(self, url: str) -> dict | None:
+        except ClientError as e:
+            logger.error("Error token update: %s", e)
+            return False
+
+    async def _raw_get(self, url: str) -> dict:
+
         try:
             async with self.session.get(url) as resp:
-                if resp.status != 200:
-                    logger.error(
-                        f"Error request to {self.__class__.__name__}. Status: %s",
-                        resp.status,
-                    )
+
+                resp.raise_for_status()
 
                 logger.info("GET %s -> %s", url, resp.status)
                 text = await resp.text()
                 logger.debug("Response text for %s: %s", url, text)
 
-                try:
-                    return json.loads(text)
-                except json.JSONDecodeError:
-                    logger.error("Parse JSON error from %s", url)
+                return json.loads(text)
 
-        except Exception as e:
+        except asyncio.TimeoutError:
+            logger.error("Request to %s timed out", url)
+            raise NetworkError("Timeout")
+
+        except ContentTypeError as e:
+            logger.error("Invalid content type from %s: %s", url, e)
+            raise JsonResponseError(f"Invalid content type: {e}")
+
+        except json.JSONDecodeError as e:
+            body = await resp.text()
+            logger.error("JSON decode error from %s: %s…", url, body[:200])
+            raise JsonResponseError(f"JSON decode error: {e}")
+
+        except ClientResponseError as e:
+            logger.error("HTTP error %s for %s", e.status, url)
+            raise HttpStatusError(e.status, url)
+
+        except ClientError as e:
             logger.error("Network error for %s: %s", url, e)
+            raise NetworkError(f"{e}")
 
     async def fetch(
         self,
         url: str,
         refresh_url: str,
         allow_refresh: bool = False,
-    ) -> dict | None:
+        expected_type: Type[Union[dict, list]] = dict,
+    ) -> list | dict:
         """
-        Gross function for GET-requests with JSON parse.
+        Common function for GET-requests with JSON parse.
         If allow_refresh=True, Exception jwt expired will try to update token and repeat request.
         """
+        try:
+            data = await self._raw_get(url=url)
 
-        data = await self._raw_get(url=url)
+            if allow_refresh and isinstance(data, dict):
+                if data.get("error") == "jwt expired":
+                    logger.info("JWT expired for %s, trying update...", url)
+                    if await self._refresh_access_token(refresh_url=refresh_url):
+                        data = await self._raw_get(url=url)
+                    else:
+                        logger.error("Update token failed %s", url)
+                        return [] if expected_type is list else {}
 
-        if data is None:
-            return {}
+            if not isinstance(data, expected_type):
+                raise ApiError(
+                    f"Expected {expected_type.__name__}, got {type(data).__name__}"
+                )
 
-        if allow_refresh and isinstance(data, dict):
-            if data.get("error") == "jwt expired":
-                logger.info("JWT expired for %s, trying update...", url)
-                if await self._refresh_access_token(refresh_url=refresh_url):
-                    data = await self._raw_get(url=url)
-                else:
-                    logger.error("Update token failed %s", url)
-                    return {}
+            return data
 
-        return data
+        except HttpStatusError as e:
+            logger.error("HTTP Status Error %s for %s", e.status, e.url)
+            return [] if expected_type is list else {}
+
+        except NetworkError as e:
+            logger.error("Network Error: ", e)
+            return [] if expected_type is list else {}
+
+        except JsonResponseError as e:
+            logger.error("Parse JSON error from %s", url, e)
+            return [] if expected_type is list else {}

@@ -6,6 +6,7 @@ import aiohttp
 
 import config
 from api_v1.crypto.axiom.config import settings
+from core.exceptions import ApiError
 from core.requests.AxiomRequest import AxiomRequest
 
 logger = logging.getLogger(__name__)
@@ -33,45 +34,59 @@ class AxiomApi:
         client: AxiomRequest,
         url: str = settings.token_info_url,
         refresh_url: str = settings.refresh_access_token_url,
-    ) -> dict | None:
+    ) -> dict:
         token_info_url = url + self.pair_address
-        return await client.fetch(
-            token_info_url,
-            refresh_url,
-            allow_refresh=True,
-        )
+        try:
+            return await client.fetch(
+                token_info_url,
+                refresh_url,
+                allow_refresh=True,
+            )
+        except ApiError as e:
+            logger.error("ApiError fetch_token_info: ", e)
+            return {}
 
     async def fetch_holder_data(
         self,
         client: AxiomRequest,
         url: str | tuple = settings.holder_data_url,
         refresh_url: str = settings.refresh_access_token_url,
-    ) -> dict | None:
+    ) -> dict:
         holder_data_url = url[0] + self.pair_address + url[1]
-        data = await client.fetch(
-            holder_data_url,
-            refresh_url,
-            allow_refresh=True,
-        )
+
+        try:
+            data = await client.fetch(
+                holder_data_url,
+                refresh_url,
+                allow_refresh=True,
+                expected_type=list,
+            )
+        except ApiError as e:
+            logger.error("ApiError fetch_holder_data: ", e)
+            return {}
 
         if isinstance(data, list) and data:
             data.sort(key=lambda x: x.get("tokenBalance", 0), reverse=True)
             return data[0]
 
-        return None
+        return {}
 
     async def fetch_pair_info(
         self,
         client: AxiomRequest,
         url: str = settings.pair_info_url,
         refresh_url: str = settings.refresh_access_token_url,
-    ) -> dict | None:
+    ) -> dict:
         pair_info_url = url + self.pair_address
-        return await client.fetch(
-            pair_info_url,
-            refresh_url,
-            allow_refresh=True,
-        )
+        try:
+            return await client.fetch(
+                pair_info_url,
+                refresh_url,
+                allow_refresh=True,
+            )
+        except ApiError as e:
+            logger.error("ApiError fetch_pair_info: ", e)
+            return {}
 
     async def get_info_about_token(self) -> dict[str, Any]:
         """
@@ -100,24 +115,18 @@ class AxiomApi:
                 token_info_task,
                 top_holder_task,
                 pair_info_task,
-                return_exceptions=True,
             )
-
-            for var in (token_info, top_holder, pair_info):
-                if isinstance(var, Exception):
-                    logger.warning("Received exception in basic info gather: %s", var)
 
             # Gathering results
             result: dict[str, Any] = {
-                "token_info": None,
-                "top_holder": None,
+                "token_info": {},
+                "top_holder": {},
             }
 
             result.update(settings.defaults)
 
             result["token_info"] = token_info
             result["top_holder"] = top_holder
-
             for key, default in settings.defaults.items():
                 result[key] = pair_info.get(key, default)
 
