@@ -3,6 +3,7 @@ from typing import Any
 
 
 from api_v1.crypto.dex.config import settings
+from core.exceptions import ApiError, JsonParseError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -78,5 +79,6 @@ def parse_data(dex_data: list):
 
         return result
 
-    except Exception as e:
-        logger.exception("Error parse data from DEX: %s", e)
+    except AttributeError as e:
+        logger.error("Error parse data from DEX: %s", e)
+        raise JsonParseError("Error parse data", raw_text=str(e))
