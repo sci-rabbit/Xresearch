@@ -3,6 +3,8 @@ import logging
 import aiohttp
 
 from api_v1.crypto.moralis.config import settings
+from core.exceptions import ApiError
+from core.requests.MoralisRequest import MoralisRequest
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -17,22 +19,24 @@ class MoralisApi:
         self.headers = headers
         self.session = session
 
-    async def get_pa(self, url: tuple | str = settings.token_pair_url) -> str | None:
+    async def fetch_token_pair(
+        self,
+        client: MoralisRequest,
+        url: tuple = settings.token_pair_url,
+    ) -> str:
         token_pair_url = url[0] + self.contract_address + url[1]
+        try:
+            return await client.fetch(url=token_pair_url)
+        except ApiError as e:
+            logger.error("ApiError fetch_token_pair Moralis: ", e)
+            return ""
 
-        async with self.session.get(token_pair_url, headers=self.headers) as response:
-            try:
-                data = await response.json()
-                logger.info("Полученные данные от Moralis API: %s", data)
-                if isinstance(data, dict):
-                    list_pa = data.get("pairs", [])
-                    if list_pa and isinstance(list_pa, list):
-                        first_pa = list_pa[0]
+    async def get_pair_address(self) -> str:
+        client = MoralisRequest(session=self.session, headers=self.headers)
 
-                        if isinstance(first_pa, dict):
-                            pa = first_pa.get("pairAddress", "")
-                            return pa
+        moralis_data = await self.fetch_token_pair(client=client)
 
-            except Exception as e:
-                logger.exception("Ошибка при запросе к Moralis API: %s", e)
-                return None
+        if moralis_data:
+            return moralis_data
+
+        return ""
