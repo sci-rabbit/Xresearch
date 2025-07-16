@@ -17,14 +17,19 @@ logging.basicConfig(level=logging.INFO)
 
 class BaseRequest:
 
-    def __init__(self, session: aiohttp.ClientSession, headers: dict = None):
+    def __init__(
+        self, session: aiohttp.ClientSession, headers: dict = None, cookies: dict = None
+    ):
         self.session = session
         self.headers = headers
+        self.cookies = cookies
 
     async def _raw_get(self, url: str) -> dict:
 
         try:
-            async with self.session.get(url=url, headers=self.headers) as response:
+            async with self.session.get(
+                url=url, headers=self.headers, cookies=self.cookies
+            ) as response:
 
                 response.raise_for_status()
                 logger.info("GET %s -> %s", url, response.status)
