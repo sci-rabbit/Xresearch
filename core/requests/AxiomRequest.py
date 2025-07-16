@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Type, Union
 
-import aiohttp
 from aiohttp import ClientError, ClientResponseError, ContentTypeError
 
 from core.exceptions import (
@@ -25,22 +24,12 @@ REFRESH_TOKEN_TYPE = "auth-refresh-token"
 
 class AxiomRequest(BaseRequest):
 
-    def __init__(
-        self,
-        session: aiohttp.ClientSession,
-        COOKIES: dict,
-        HEADERS: dict,
-    ):
-        super().__init__(session)
-        self.COOKIES = COOKIES
-        self.HEADERS = HEADERS
-
     async def _refresh_access_token(self, refresh_url: str) -> bool:
         """
         Update access- and refresh- tokens through endpoint refresh-access-token.
         """
         try:
-            async with self.session.post(refresh_url, headers=self.HEADERS) as response:
+            async with self.session.post(refresh_url, headers=self.headers) as response:
                 logger.info("Updated token try. Status: %s", response.status)
                 if response.status != 200:
                     logger.error("Error token update. Status: %s", response.status)
@@ -53,10 +42,10 @@ class AxiomRequest(BaseRequest):
                     logger.error("New tokens not found in the cookie response.")
                     return False
 
-                self.COOKIES[ACCESS_TOKEN_TYPE] = new_access.value
-                self.COOKIES[REFRESH_TOKEN_TYPE] = new_refresh.value
+                self.cookies[ACCESS_TOKEN_TYPE] = new_access.value
+                self.cookies[REFRESH_TOKEN_TYPE] = new_refresh.value
 
-                self.session.cookie_jar.update_cookies(self.COOKIES)
+                self.session.cookie_jar.update_cookies(self.cookies)
                 logger.info("Tokens successfully update.")
                 return True
 

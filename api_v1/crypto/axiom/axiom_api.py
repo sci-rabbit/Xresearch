@@ -43,7 +43,7 @@ class AxiomApi:
                 allow_refresh=True,
             )
         except ApiError as e:
-            logger.error("ApiError fetch_token_info: ", e)
+            logger.error("ApiError fetch_token_info Axiom: ", e)
             return {}
 
     async def fetch_holder_data(
@@ -55,19 +55,19 @@ class AxiomApi:
         holder_data_url = url[0] + self.pair_address + url[1]
 
         try:
-            data = await client.fetch(
+            axiom_data = await client.fetch(
                 holder_data_url,
                 refresh_url,
                 allow_refresh=True,
                 expected_type=list,
             )
         except ApiError as e:
-            logger.error("ApiError fetch_holder_data: ", e)
+            logger.error("ApiError fetch_holder_data Axiom: ", e)
             return {}
 
-        if isinstance(data, list) and data:
-            data.sort(key=lambda x: x.get("tokenBalance", 0), reverse=True)
-            return data[0]
+        if isinstance(axiom_data, list) and axiom_data:
+            axiom_data.sort(key=lambda x: x.get("tokenBalance", 0), reverse=True)
+            return axiom_data[0]
 
         return {}
 
@@ -85,7 +85,7 @@ class AxiomApi:
                 allow_refresh=True,
             )
         except ApiError as e:
-            logger.error("ApiError fetch_pair_info: ", e)
+            logger.error("ApiError fetch_pair_info Axiom: ", e)
             return {}
 
     async def get_info_about_token(self) -> dict[str, Any]:
@@ -103,8 +103,8 @@ class AxiomApi:
         ) as session:
             client = AxiomRequest(
                 session=session,
-                COOKIES=self.COOKIES,
-                HEADERS=self.HEADERS,
+                cookies=self.COOKIES,
+                headers=self.HEADERS,
             )
 
             token_info_task = asyncio.create_task(self.fetch_token_info(client))
