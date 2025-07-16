@@ -4,4 +4,10 @@ __all__ = (
     "BaseRequest",
 )
 
-from .requests import BaseRequest, AxiomRequest, DexRequest
+from .requests import (
+    BaseRequest,
+    AxiomRequest,
+    DexRequest,
+    MoralisRequest,
+    STRequest,
+)
