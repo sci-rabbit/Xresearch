@@ -9,16 +9,14 @@ logging.basicConfig(level=logging.INFO)
 
 
 class DexRequest(BaseRequest):
+
     async def fetch(self, url: str) -> list:
 
         try:
             data = self._raw_get(url=url)
 
             if not isinstance(data, list):
-                if not isinstance(data, list):
-                    raise ApiError(
-                        f"Expected {list.__name__}, got {type(data).__name__}"
-                    )
+                raise ApiError(f"Expected {list.__name__}, got {type(data).__name__}")
 
             return data
 

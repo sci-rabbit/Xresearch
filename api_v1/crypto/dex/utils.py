@@ -3,13 +3,13 @@ from typing import Any
 
 
 from api_v1.crypto.dex.config import settings
-from core.exceptions import ApiError, JsonParseError
+from core.exceptions import JsonParseError
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_data(dex_data: list):
+def parse_data_from_dex(dex_data: list) -> dict[str, Any]:
 
     pools = []
 
@@ -79,6 +79,10 @@ def parse_data(dex_data: list):
 
         return result
 
-    except AttributeError as e:
+    except TypeError as e:
+        logger.error("Error parse data from DEX: %s", e)
+        raise JsonParseError("Error parse data", raw_text=str(e))
+
+    except IndexError as e:
         logger.error("Error parse data from DEX: %s", e)
         raise JsonParseError("Error parse data", raw_text=str(e))
