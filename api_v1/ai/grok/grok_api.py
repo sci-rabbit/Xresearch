@@ -15,7 +15,6 @@ logging.basicConfig(level=logging.INFO)
 class OpenHandlerAI:
 
     def __init__(self, json_data: dict, api_key: str = None) -> None:
-
         if api_key is None:
             api_key = env.GROK_API
         if not api_key:
@@ -51,7 +50,6 @@ class OpenHandlerAI:
                 return "0"
 
     async def get_overview(self) -> str:
-
         async with self.semaphore:
             try:
                 response = await self.client.chat.completions.create(

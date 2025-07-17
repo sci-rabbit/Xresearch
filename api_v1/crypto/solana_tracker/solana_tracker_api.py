@@ -18,27 +18,25 @@ class SolanaTrackerApi:
         self,
         token_address: str,
         session: aiohttp.ClientSession,
-        header: dict = settings.header,
+        headers: dict = settings.headers,
     ) -> None:
         self.contract_address = token_address
-        self.header = header
-        self.session = session
+        self.headers = headers
+        self.client = STRequest(session=session)
 
     async def fetch_token_info(
         self,
-        client: STRequest,
         url: str = settings.token_info_url,
     ) -> dict:
         token_info_url = url + self.contract_address
         try:
-            return await client.fetch(url=token_info_url)
+            return await self.client.fetch(url=token_info_url, headers=self.headers)
         except ApiError as e:
             logger.error("ApiError fetch_token_info SolanaTracker: ", e)
             return {}
 
     async def get_info_about_token(self) -> dict[str, Any]:
-        client = STRequest(session=self.session)
-        st_data = await self.fetch_token_info(client=client)
+        st_data = await self.fetch_token_info()
 
         try:
             parsed_data = parse_data_st(st_data)
