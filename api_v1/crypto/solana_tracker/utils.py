@@ -41,3 +41,7 @@ def parse_data_st(data_from_solana_tracker_dict: dict[str, Any]) -> dict[str, An
     except TypeError as e:
         logger.error("Error parse data from SolanaTracker: %s", e)
         raise JsonParseError("Error parse data", raw_text=str(e))
+
+    except IndexError as e:
+        logger.error("Error parse data from DEX: %s", e)
+        raise JsonParseError("Error parse data", raw_text=str(e))

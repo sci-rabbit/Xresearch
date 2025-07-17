@@ -7,7 +7,7 @@ class BaseSTSettings(BaseSettings):
 
     token_info_url: str = "https://data.solanatracker.io/tokens/"
 
-    header = {
+    headers = {
         "x-api-key": X_API_KEY_FOR_ST,
     }
 
