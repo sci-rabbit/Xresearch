@@ -10,10 +10,9 @@ logging.basicConfig(level=logging.INFO)
 
 class STRequest(BaseRequest):
 
-    async def fetch(self, url: str) -> dict:
-
+    async def fetch(self, url: str, headers: dict) -> dict:
         try:
-            data = self._raw_get(url=url)
+            data = self._raw_get(url=url, headers=headers)
 
             if not isinstance(data, dict):
                 raise ApiError(f"Expected {dict.__name__}, got {type(data).__name__}")

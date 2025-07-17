@@ -3,7 +3,11 @@ import json
 import logging
 from typing import Type, Union
 
-from aiohttp import ClientError, ClientResponseError, ContentTypeError
+from aiohttp import (
+    ClientError,
+    ClientResponseError,
+    ContentTypeError,
+)
 
 from core.exceptions import (
     HttpStatusError,
@@ -24,12 +28,17 @@ REFRESH_TOKEN_TYPE = "auth-refresh-token"
 
 class AxiomRequest(BaseRequest):
 
-    async def _refresh_access_token(self, refresh_url: str) -> bool:
+    async def _refresh_access_token(
+        self,
+        refresh_url: str,
+        headers: dict,
+        cookies: dict,
+    ) -> bool:
         """
         Update access- and refresh- tokens through endpoint refresh-access-token.
         """
         try:
-            async with self.session.post(refresh_url, headers=self.headers) as response:
+            async with self.session.post(refresh_url, headers=headers) as response:
                 logger.info("Updated token try. Status: %s", response.status)
                 if response.status != 200:
                     logger.error("Error token update. Status: %s", response.status)
@@ -42,10 +51,10 @@ class AxiomRequest(BaseRequest):
                     logger.error("New tokens not found in the cookie response.")
                     return False
 
-                self.cookies[ACCESS_TOKEN_TYPE] = new_access.value
-                self.cookies[REFRESH_TOKEN_TYPE] = new_refresh.value
+                cookies[ACCESS_TOKEN_TYPE] = new_access.value
+                cookies[REFRESH_TOKEN_TYPE] = new_refresh.value
 
-                self.session.cookie_jar.update_cookies(self.cookies)
+                self.session.cookie_jar.update_cookies(cookies)
                 logger.info("Tokens successfully update.")
                 return True
 
@@ -57,8 +66,13 @@ class AxiomRequest(BaseRequest):
             logger.error("Error token update: %s", e)
             return False
 
-    async def _raw_get(self, url: str) -> dict:
-
+    async def _raw_get(
+        self,
+        url: str,
+        headers: dict = None,
+        cookies: dict = None,
+        params: dict = None,
+    ) -> dict:
         try:
             async with self.session.get(url) as resp:
 
@@ -95,6 +109,8 @@ class AxiomRequest(BaseRequest):
         self,
         url: str,
         refresh_url: str,
+        headers: dict,
+        cookies: dict,
         allow_refresh: bool = False,
         expected_type: Type[Union[dict, list]] = dict,
     ) -> list | dict:
@@ -108,7 +124,11 @@ class AxiomRequest(BaseRequest):
             if allow_refresh and isinstance(data, dict):
                 if data.get("error") == "jwt expired":
                     logger.info("JWT expired for %s, trying update...", url)
-                    if await self._refresh_access_token(refresh_url=refresh_url):
+                    if await self._refresh_access_token(
+                        refresh_url=refresh_url,
+                        headers=headers,
+                        cookies=cookies,
+                    ):
                         data = await self._raw_get(url=url)
                     else:
                         logger.error("Update token failed %s", url)

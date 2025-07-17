@@ -1,7 +1,5 @@
 import logging
 
-import aiohttp
-
 from core import BaseRequest
 from core.exceptions import JsonResponseError, NetworkError, HttpStatusError, ApiError
 
@@ -11,10 +9,9 @@ logging.basicConfig(level=logging.INFO)
 
 class MoralisRequest(BaseRequest):
 
-    async def fetch(self, url: str) -> str:
-
+    async def fetch(self, url: str, headers: dict) -> str:
         try:
-            data = await self._raw_get(url=url)
+            data = await self._raw_get(url=url, headers=headers)
 
             if not isinstance(data, dict):
                 raise ApiError(f"Expected {dict.__name__}, got {type(data).__name__}")
@@ -35,7 +32,11 @@ class MoralisRequest(BaseRequest):
             return ""
 
         except NetworkError as e:
-            logger.error("Network Error: ", e)
+            logger.error(
+                "Network Error: ",
+                url,
+                e,
+            )
             return ""
 
         except JsonResponseError as e:
