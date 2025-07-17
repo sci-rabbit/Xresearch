@@ -1,9 +1,4 @@
-__all__ = (
-    "axiom",
-    "dex",
-    "moralis",
-    "solana_tracker",
-)
+__all__ = ("axiom", "dex", "moralis", "solana_tracker", "grok")
 
 from .crypto import (
     axiom,
@@ -11,3 +6,5 @@ from .crypto import (
     moralis,
     solana_tracker,
 )
+
+from .ai import grok
